@@ -7,13 +7,18 @@ const multer = require('multer'); // Import multer
 const bodyParser = require('body-parser');
 
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+const corsOptions = {
+  origin: 'https://66c37b4504e47313a124b7db--profact-test.netlify.app', // Update this with your frontend origin
+  credentials: true, // Allow credentials (cookies, HTTP authentication)
+};
+
 dotenv.config({ path: envFile });
 
 const app = express();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Enable CORS for all routes
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(morgan('combined'));
 app.use(bodyParser.json({ limit: '90mb' })); // Increase the limit as needed
 
