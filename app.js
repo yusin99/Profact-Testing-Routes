@@ -2,6 +2,9 @@ const express = require('express');
 const Stripe = require('stripe');
 const dotenv = require('dotenv');
 const cors = require('cors'); // Importing cors
+const morgan = require("morgan");
+const multer = require('multer'); // Import multer
+const bodyParser = require('body-parser');
 
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
 dotenv.config({ path: envFile });
@@ -11,7 +14,14 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Enable CORS for all routes
 app.use(cors());
+app.use(morgan('combined'));
+app.use(bodyParser.json({ limit: '90mb' })); // Increase the limit as needed
 
+
+// Configure multer for file upload handling
+const upload = multer({ dest: 'uploads/' }); // Files will be saved to 'uploads' directory
+
+// Middleware to parse JSON bodies
 app.use(express.json());
 
 // Map offer titles to Stripe price IDs
@@ -50,7 +60,7 @@ app.post('/create-checkout-session', async (req, res) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${process.env.SUCCESS_URL}`,
+      success_url: `${process.env.SUCCESS_URL}?session_id={CHECKOUT_SESSION_ID}`, // Include session_id in success_url
       cancel_url: `${process.env.CANCEL_URL}`,
     });
 
@@ -59,6 +69,27 @@ app.post('/create-checkout-session', async (req, res) => {
     console.error('Stripe error:', error);
     res.status(500).json({ error: error.message });
   }
+});
+
+app.get('/checkout-session/:sessionId', async (req, res) => {
+  const { sessionId } = req.params;
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    res.json(session); // Ensure this sends JSON
+  } catch (error) {
+    console.error('Error retrieving session:', error);
+    res.status(500).json({ error: error.message }); // Returning error in JSON
+  }
+});
+
+// POST route to handle both text and file uploads
+app.post('/upload', (req, res) => {
+  console.log(req.body)
+  // Process the received data (text fields and files)
+  res.json({
+    data: req.body,
+  });
 });
 
 // Start the server
